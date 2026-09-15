@@ -236,6 +236,20 @@ def load_url_list_from_web(list_url: str, base: str) -> list[str]:
 
     return urls
 
+# Load the list of URLs from a file
+def load_url_list_from_file(list_path: str) -> list[str]:
+    if not os.path.isfile(list_path):
+        sys.exit(f"ERROR: URL list file not found: {list_path}")
+
+    urls = []
+    with open(list_path, "r", encoding="utf-8") as f:
+        for line_no, raw_line in enumerate(f, start=1):
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            urls.append(line)
+    return urls
+
 # Fetch a single URL:
 def fetch_url(url: str, timeout: float = 15.0) -> FetchResult:
     try:
@@ -291,6 +305,17 @@ def build_relative_path(slug: str, alt: AlternativeSpec, add_file_ext: bool, def
 
     return combined
 
+# Make text replacements in the file content:
+def apply_text_replacements(content: str, replacements: list[TextReplacement], alt: str) -> str:
+    for r in replacements:
+        if r.applies_to is not None and alt not in r.applies_to:
+            continue
+        if r.regex:
+            content = re.sub(r.search, r.replace, content)
+        else:
+            content = content.replace(r.search, r.replace)
+
+    return content
 
 
 # MAIN
@@ -311,7 +336,7 @@ if config.list_is_url:
     urls = load_url_list_from_web(config.list_path, config.base)
 else:
     print(f"- Reading URL list from file: {config.list_path}");
-    urls = load_url_list(config.list_path)
+    urls = load_url_list_from_file(config.list_path)
 
 print(f"- Found URLs to load: {str(len(urls))}");
 
@@ -356,17 +381,36 @@ for url in urls:
             warnings.append(result.warning)
             print(f"WARNING: {result.warning}")
             continue
+        
+        # apply text changes:
+        content = apply_text_replacements(result.content, config.text_replacements, alt.name)
 
-        # extract the relative path, to re-create it for the saved file:
+        # find the save pathe:
         rel_path = build_relative_path(slug, alt, config.add_file_ext, config.default_file_ext)
-        print("    + Relative path: " + rel_path)
+        out_path = local_fs_path(config.target, rel_path)
+        print("    Save as: {out_path}")
 
+        # write the downloaded page to a file
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        total_ok += 1
 
     # End of alternatives loop
 
 
 # End of URL Loop
 
+# Print summary
 print()
 print(f"Done. {total_ok}/{total_attempted} files downloaded successfully, "
       f"{len(warnings)} warning(s).")
+
+# If there were warnings, print them all together here:
+if warnings:
+    print("Warnings summary:")
+    for w in warnings:
+        print(f"  - {w}")
+
+# Done.
+print("All done.")
