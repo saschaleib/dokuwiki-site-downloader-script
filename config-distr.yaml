@@ -1,0 +1,26 @@
+---
+list: "listfile-or-url"
+alternatives:
+  - name: "html"
+    pattern: "{base}{slug}"
+    fileExt: ".html"
+options:
+  userewrite: 1
+target: "target/file/path/"
+base: "https://yoursite.com/dokuwiki/"
+textReplacements:
+  - search: '<div id="dokuwiki__sitetools">'
+    replace: '<!-- div id="dokuwiki__sitetools">'
+    regex: false
+  - search: '<!-- BREADCRUMBS -->'
+    replace: '-->\n\t<!-- BREADCRUMBS -->'
+    regex: false
+  - search: '<div class="docInfo">'
+    replace: '<!-- div class="docInfo">'
+    regex: false
+  - search: '<div class="docInfo">'
+    replace: '<!-- div class="docInfo">'
+    regex: false
+  - search: '<hr class="a11y" />'
+    replace: '--><hr class="a11y" />'
+    regex: false
