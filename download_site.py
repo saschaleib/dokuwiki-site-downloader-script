@@ -1,6 +1,10 @@
+#!/usr/bin/env python3
+
 # Download DokuWiki to Static Site
 # Author: Sascha Leib
 # License: GPL3
+
+# IMPORTS:
 
 import os
 import sys
@@ -27,7 +31,8 @@ except ImportError:
         "    pip install requests"
     )
 
-# define data classes:
+# DATA CLASSES:
+
 @dataclass
 class TextReplacement:
     search: str
@@ -59,6 +64,7 @@ class FetchResult:
     content: str | None = None
     warning: str | None = None
 
+# FUNCTIONS:
 
 # Load the config file:
 def load_config(config_path: str) -> Config:
@@ -267,14 +273,39 @@ def slug_for(url: str, base: str) -> str | None:
         return None
     return remainder
 
+# build the relative path for saving the file:
+def build_relative_path(slug: str, alt: AlternativeSpec, add_file_ext: bool, default_ext: str) -> str:
 
-# Actual script starts here:
+    # use 'file_ext', if provided:
+    if alt.file_ext is not None:
+        return slug + alt.file_ext
+
+    # alternatively, use the legacy suffix:
+    combined = slug + (alt.legacy_suffix or "")
+
+    # add an extension, if required:
+    last_segment = posixpath.basename(combined)
+    has_extension = "." in last_segment
+    if add_file_ext and not has_extension:
+        combined += default_ext
+
+    return combined
+
+
+
+# MAIN
+
+# find the script path and config files
+# (config file can be passed as parameter, otherwise use the default)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(script_dir, "config.yaml")
 
 print(f"- Loading config from: {config_path}");
 
+# read the configuration file:
 config = load_config(config_path)
+
+# Where to load the list of files from?
 if config.list_is_url:
     print(f"- Loading list of URLs from: {config.list_path}");
     urls = load_url_list_from_web(config.list_path, config.base)
@@ -317,7 +348,19 @@ for url in urls:
         fetch_target = alt.pattern.format(base=config.base, slug=slug)
         total_attempted += 1
 
-        print(fetch_target)
+        print("  * " + fetch_target)
+
+        # attempt to load the alt file:
+        result = fetch_url(fetch_target)
+        if not result.ok:
+            warnings.append(result.warning)
+            print(f"WARNING: {result.warning}")
+            continue
+
+        # extract the relative path, to re-create it for the saved file:
+        rel_path = build_relative_path(slug, alt, config.add_file_ext, config.default_file_ext)
+        print("    + Relative path: " + rel_path)
+
 
     # End of alternatives loop
 
