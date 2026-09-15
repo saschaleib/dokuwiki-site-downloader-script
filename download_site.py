@@ -56,6 +56,7 @@ class Config:
     base: str
     add_file_ext: bool
     default_file_ext: str
+    userewrite: str
     text_replacements: list[TextReplacement] = field(default_factory=list)
 
 @dataclass
@@ -156,7 +157,7 @@ def load_config(config_path: str) -> Config:
     options = raw.get("options", {}) or {}
     add_file_ext = bool(options.get("addFileExt", False))
     default_file_ext = options.get("defaultFileExt", ".html")
-
+    urlStyle = options.get("userewrite", "1")
 
     # "textReplacements" = list of text replacement patterns
     replacements_raw = raw.get("textReplacements", []) or []
@@ -207,6 +208,7 @@ def load_config(config_path: str) -> Config:
         base = base,
         add_file_ext = add_file_ext,
         default_file_ext = default_file_ext,
+        userewrite = urlStyle,
         text_replacements = replacements,
     )
 
@@ -317,7 +319,6 @@ def apply_text_replacements(content: str, replacements: list[TextReplacement], a
 
     return content
 
-
 # MAIN
 
 # find the script path and config files
@@ -397,7 +398,6 @@ for url in urls:
         total_ok += 1
 
     # End of alternatives loop
-
 
 # End of URL Loop
 
